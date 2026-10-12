@@ -1,1167 +1,660 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pet Med Tracker - Shared Household</title>
-    
-    <!-- PWA & Mobile iOS Web App Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Pet Meds">
-    <meta name="theme-color" content="#4f46e5">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        ios: {
-                            bg: '#F2F2F7',
-                            card: '#FFFFFF',
-                            darkBg: '#000000',
-                            darkCard: '#1C1C1E',
-                            blue: '#007AFF',
-                            green: '#34C759',
-                            orange: '#FF9500',
-                            purple: '#AF52DE',
-                            red: '#FF3B30'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Parker's Med Tracker</title>
 
-    <style>
-        body {
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .pt-safe {
-            padding-top: max(1rem, env(safe-area-inset-top));
-        }
-        .pb-safe {
-            padding-bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4rem));
-        }
-        .bottom-nav-safe {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-    </style>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styling & Animations -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      background-color: #f8fafc;
+    }
+
+    /* iOS Safe Area Spacing */
+    .pb-safe {
+      padding-bottom: max(env(safe-area-inset-bottom), 1.25rem);
+    }
+    
+    .pt-safe {
+      padding-top: max(env(safe-area-inset-top), 1rem);
+    }
+
+    /* Glassmorphism Header */
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Custom Scrollbar Hide */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Smooth Tab Transitions */
+    .tab-content {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 </head>
-<body class="bg-ios-bg dark:bg-ios-darkBg text-gray-900 dark:text-gray-100 min-h-full font-sans antialiased transition-colors duration-200">
+<body class="text-slate-800 bg-slate-50 min-h-screen flex flex-col antialiased">
 
-    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl bg-ios-bg dark:bg-ios-darkBg">
-
-        <!-- Top Navigation / Household & Pet Header Bar -->
-        <header class="sticky top-0 z-30 bg-white/85 dark:bg-ios-darkCard/85 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800/80 px-4 pt-safe pb-3 flex items-center justify-between transition-colors">
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="openPetProfileModal()">
-                <div class="relative">
-                    <img id="headerPetAvatar" src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=150&auto=format&fit=crop&q=80" alt="Pet Avatar" class="w-11 h-11 rounded-full object-cover ring-2 ring-indigo-500/30">
-                    <span id="syncIndicator" class="absolute bottom-0 right-0 bg-emerald-500 w-3 h-3 rounded-full border-2 border-white dark:border-ios-darkCard" title="Live Synced"></span>
-                </div>
-                <div>
-                    <div class="flex items-center space-x-1.5">
-                        <h1 id="headerPetName" class="font-bold text-lg leading-tight text-gray-900 dark:text-white">Whiskers</h1>
-                        <i class="fa-solid fa-pen text-[10px] text-gray-400"></i>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <p id="headerPetSubtext" class="text-xs text-gray-500 dark:text-gray-400">3 yrs • 9.5 lbs</p>
-                        <span class="text-gray-300 dark:text-gray-700">•</span>
-                        <button onclick="openHouseholdModal()" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center space-x-1 hover:underline">
-                            <i class="fa-solid fa-house-user text-[10px]"></i>
-                            <span id="headerHouseholdCode">Code: CAT-123</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-2">
-                <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center transition active:scale-95">
-                    <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
-                </button>
-                <button onclick="openSettingsModal()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center transition active:scale-95">
-                    <i class="fa-solid fa-gear text-sm"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- MAIN CONTENT CONTAINER -->
-        <main class="flex-1 px-4 py-4 pb-safe overflow-y-auto space-y-5">
-
-            <!-- TAB 1: TODAY / HOME DASHBOARD VIEW -->
-            <section id="tab-today" class="tab-content space-y-5">
-                
-                <!-- Quick Date Selector Strip -->
-                <div class="flex items-center justify-between bg-white dark:bg-ios-darkCard p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <button onclick="navigateDate(-1)" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-90">
-                        <i class="fa-solid fa-chevron-left text-xs"></i>
-                    </button>
-                    <div class="text-center">
-                        <span id="selectedDateDisplay" class="font-bold text-base text-gray-900 dark:text-white block">Today</span>
-                        <span id="selectedFullDateDisplay" class="text-xs text-gray-500 dark:text-gray-400">Monday, Oct 12</span>
-                    </div>
-                    <button onclick="navigateDate(1)" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-90">
-                        <i class="fa-solid fa-chevron-right text-xs"></i>
-                    </button>
-                </div>
-
-                <!-- Daily Dosage Totals Summary -->
-                <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/20">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center space-x-2">
-                            <i class="fa-solid fa-calculator text-indigo-200"></i>
-                            <h2 class="font-bold text-sm tracking-wide uppercase text-indigo-100">Daily Totals Breakdown</h2>
-                        </div>
-                        <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium" id="dailyTotalsCountTag">0 Meds Logged</span>
-                    </div>
-                    <div id="dailyTotalsContainer" class="space-y-2">
-                        <!-- Dynamic content -->
-                    </div>
-                </div>
-
-                <!-- 3 Time Slots Section (Morning, Afternoon, Evening) -->
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-bold text-lg text-gray-900 dark:text-white">Daily Slots</h2>
-                        <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold" id="slotProgressText">0 / 3 Slots Logged</span>
-                    </div>
-
-                    <!-- Morning Slot -->
-                    <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
-                                    <i class="fa-solid fa-sun"></i>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 dark:text-white text-base">Morning</h3>
-                                    <p class="text-xs text-gray-400">6:00 AM - 12:00 PM</p>
-                                </div>
-                            </div>
-                            <button onclick="openLogDoseModal('Morning')" class="px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 active:scale-95 transition">
-                                <i class="fa-solid fa-plus mr-1"></i> Log Dose
-                            </button>
-                        </div>
-                        <div id="slot-Morning-logs" class="space-y-2 pt-1"></div>
-                    </div>
-
-                    <!-- Afternoon Slot -->
-                    <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold text-sm">
-                                    <i class="fa-solid fa-cloud-sun"></i>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 dark:text-white text-base">Afternoon</h3>
-                                    <p class="text-xs text-gray-400">12:00 PM - 5:00 PM</p>
-                                </div>
-                            </div>
-                            <button onclick="openLogDoseModal('Afternoon')" class="px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 active:scale-95 transition">
-                                <i class="fa-solid fa-plus mr-1"></i> Log Dose
-                            </button>
-                        </div>
-                        <div id="slot-Afternoon-logs" class="space-y-2 pt-1"></div>
-                    </div>
-
-                    <!-- Evening Slot -->
-                    <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2.5">
-                                <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm">
-                                    <i class="fa-solid fa-moon"></i>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-900 dark:text-white text-base">Evening</h3>
-                                    <p class="text-xs text-gray-400">5:00 PM - 11:59 PM</p>
-                                </div>
-                            </div>
-                            <button onclick="openLogDoseModal('Evening')" class="px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 active:scale-95 transition">
-                                <i class="fa-solid fa-plus mr-1"></i> Log Dose
-                            </button>
-                        </div>
-                        <div id="slot-Evening-logs" class="space-y-2 pt-1"></div>
-                    </div>
-                </div>
-
-                <!-- Active Medications Duration Dashboard -->
-                <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2">
-                            <i class="fa-solid fa-calendar-check text-emerald-500"></i>
-                            <h2 class="font-bold text-gray-900 dark:text-white">Days on Medication</h2>
-                        </div>
-                        <span class="text-xs text-gray-400">Continuous Courses</span>
-                    </div>
-                    <div id="durationTrackerContainer" class="space-y-2.5"></div>
-                </div>
-
-            </section>
-
-            <!-- TAB 2: MED CABINET VIEW -->
-            <section id="tab-cabinet" class="tab-content hidden space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="font-bold text-xl text-gray-900 dark:text-white">Med Cabinet</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Synced across all household devices</p>
-                    </div>
-                    <button onclick="openAddMedModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-md active:scale-95 transition flex items-center space-x-1.5">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Add Med</span>
-                    </button>
-                </div>
-
-                <div id="cabinetListContainer" class="space-y-3"></div>
-            </section>
-
-            <!-- TAB 3: HISTORY & STATS VIEW -->
-            <section id="tab-history" class="tab-content hidden space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="font-bold text-xl text-gray-900 dark:text-white">Household History</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Shared medication log timeline</p>
-                    </div>
-                    <button onclick="exportData()" class="text-xs font-semibold px-3 py-1.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg active:scale-95 transition">
-                        <i class="fa-solid fa-download mr-1"></i> Backup
-                    </button>
-                </div>
-
-                <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-                    <button onclick="filterHistory('ALL')" id="historyFilter-ALL" class="history-filter-btn px-3 py-1.5 text-xs rounded-full bg-indigo-600 text-white font-medium whitespace-nowrap">All Meds</button>
-                    <div id="historyMedFilters" class="flex space-x-2"></div>
-                </div>
-
-                <div id="fullHistoryTimeline" class="space-y-3"></div>
-            </section>
-
-        </main>
-
-        <!-- BOTTOM TAB BAR -->
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 dark:bg-ios-darkCard/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-30 bottom-nav-safe">
-            <div class="grid grid-cols-3 py-2">
-                <button onclick="switchTab('today')" id="nav-today" class="nav-tab-btn flex flex-col items-center justify-center space-y-1 text-indigo-600 dark:text-indigo-400">
-                    <i class="fa-solid fa-calendar-day text-lg"></i>
-                    <span class="text-[10px] font-medium">Today</span>
-                </button>
-                <button onclick="switchTab('cabinet')" id="nav-cabinet" class="nav-tab-btn flex flex-col items-center justify-center space-y-1 text-gray-400 dark:text-gray-500">
-                    <i class="fa-solid fa-pills text-lg"></i>
-                    <span class="text-[10px] font-medium">Cabinet</span>
-                </button>
-                <button onclick="switchTab('history')" id="nav-history" class="nav-tab-btn flex flex-col items-center justify-center space-y-1 text-gray-400 dark:text-gray-500">
-                    <i class="fa-solid fa-clock-rotate-left text-lg"></i>
-                    <span class="text-[10px] font-medium">History</span>
-                </button>
-            </div>
-        </nav>
-
-        <!-- MODAL 0: HOUSEHOLD SHARE CODE MODAL -->
-        <div id="householdModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white dark:bg-ios-darkCard w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <div class="flex items-center space-x-2">
-                        <i class="fa-solid fa-users text-indigo-600"></i>
-                        <h3 class="font-bold text-lg text-gray-900 dark:text-white">Household Sync</h3>
-                    </div>
-                    <button onclick="closeModal('householdModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <p class="text-xs text-gray-500 dark:text-gray-400">Enter the same Household Code on both your and your wife's iPhone to automatically sync medication logs in real-time.</p>
-
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Household Code / Family Key</label>
-                        <div class="flex space-x-2">
-                            <input type="text" id="householdCodeInput" uppercase placeholder="e.g. WHISKERS-MEDS" class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono uppercase">
-                            <button onclick="copyHouseholdCode()" class="px-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-xs active:scale-95 transition">
-                                <i class="fa-regular fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Your Name / Identifier</label>
-                        <input type="text" id="userNameInput" placeholder="e.g. Dad / Mom / Alex" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <button onclick="saveHouseholdSettings()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg active:scale-98 transition">
-                        Connect & Sync Realtime
-                    </button>
-                </div>
-            </div>
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 px-4 pt-safe pb-3 shadow-xs">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <i class="fa-solid font-bold fa-cat text-lg"></i>
         </div>
-
-        <!-- MODAL 1: LOG DOSE MODAL -->
-        <div id="logDoseModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white dark:bg-ios-darkCard w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200 max-h-[90vh] overflow-y-auto">
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">Log Medication Dose</h3>
-                    <button onclick="closeModal('logDoseModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <form id="logDoseForm" onsubmit="handleSaveDose(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Quick Select Medication</label>
-                        <div id="quickSelectMedsPills" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar py-1"></div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="col-span-2">
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Medication Name</label>
-                            <input type="text" id="doseMedName" required placeholder="e.g. Prednisolone" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Amount / Dose</label>
-                            <input type="number" step="any" id="doseAmount" required placeholder="e.g. 5" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Unit</label>
-                            <select id="doseUnit" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="mg">mg</option>
-                                <option value="ml">ml</option>
-                                <option value="tablet">tablet(s)</option>
-                                <option value="pill">pill(s)</option>
-                                <option value="drops">drop(s)</option>
-                                <option value="capsule">capsule</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Slot</label>
-                            <select id="doseSlot" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="Morning">Morning</option>
-                                <option value="Afternoon">Afternoon</option>
-                                <option value="Evening">Evening</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Time Given</label>
-                            <input type="time" id="doseTime" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Notes (Optional)</label>
-                        <input type="text" id="doseNotes" placeholder="e.g. Took with treat" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="pt-2">
-                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg active:scale-98 transition text-base">
-                            <i class="fa-solid fa-check mr-2"></i> Save Dose Log
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 leading-tight">Parker's Meds</h1>
+          <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5" id="sync-status-badge">
+            <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="sync-dot"></span>
+            <span id="sync-status-text">Local Storage</span>
+          </p>
         </div>
+      </div>
 
-        <!-- MODAL 2: ADD / EDIT CABINET MEDICATION -->
-        <div id="addMedModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white dark:bg-ios-darkCard w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <h3 id="addMedModalTitle" class="font-bold text-lg text-gray-900 dark:text-white">Add Medication to Cabinet</h3>
-                    <button onclick="closeModal('addMedModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <form id="addMedForm" onsubmit="handleSaveCabinetMed(event)" class="space-y-4">
-                    <input type="hidden" id="cabinetMedId">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Medication Name</label>
-                        <input type="text" id="cabinetMedName" required placeholder="e.g. Gabapentin" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Default Dose</label>
-                            <input type="number" step="any" id="cabinetMedDefaultDose" placeholder="e.g. 25" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Unit</label>
-                            <select id="cabinetMedUnit" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="mg">mg</option>
-                                <option value="ml">ml</option>
-                                <option value="tablet">tablet(s)</option>
-                                <option value="pill">pill(s)</option>
-                                <option value="drops">drop(s)</option>
-                                <option value="capsule">capsule</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Instructions / Notes</label>
-                        <input type="text" id="cabinetMedNotes" placeholder="e.g. Give every 12 hours" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="pt-2">
-                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg active:scale-98 transition">
-                            Save Medication
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- MODAL 3: PET PROFILE MODAL -->
-        <div id="petProfileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white dark:bg-ios-darkCard w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">Edit Pet Profile</h3>
-                    <button onclick="closeModal('petProfileModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <form id="petProfileForm" onsubmit="handleSavePetProfile(event)" class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Pet Name</label>
-                        <input type="text" id="petNameInput" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Age</label>
-                            <input type="text" id="petAgeInput" placeholder="3 yrs" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Weight</label>
-                            <input type="text" id="petWeightInput" placeholder="9.5 lbs" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Photo URL</label>
-                        <input type="url" id="petPhotoInput" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="pt-2">
-                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg active:scale-98 transition">
-                            Save Profile
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- MODAL 4: SETTINGS & BACKUP MODAL -->
-        <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white dark:bg-ios-darkCard w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <h3 class="font-bold text-lg text-gray-900 dark:text-white">Settings & Backup</h3>
-                    <button onclick="closeModal('settingsModal')" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <div class="space-y-3">
-                    <button onclick="openHouseholdModal()" class="w-full py-3 px-4 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300 rounded-xl text-left font-medium text-sm flex items-center justify-between">
-                        <span class="flex items-center"><i class="fa-solid fa-house-user mr-3"></i> Manage Household Code</span>
-                        <i class="fa-solid fa-chevron-right text-xs"></i>
-                    </button>
-
-                    <button onclick="exportData()" class="w-full py-3 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-left font-medium text-sm flex items-center justify-between text-gray-800 dark:text-gray-200">
-                        <span class="flex items-center"><i class="fa-solid fa-file-export mr-3 text-emerald-500"></i> Download Data Backup</span>
-                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Custom Notification Toast -->
-        <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full backdrop-blur-md shadow-xl transition duration-300 opacity-0 pointer-events-none flex items-center space-x-2">
-            <i id="toastIcon" class="fa-solid fa-check-circle text-emerald-400"></i>
-            <span id="toastMsg">Synced</span>
-        </div>
-
+      <!-- Sync Setup Button -->
+      <button onclick="openSyncModal()" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/60 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span id="household-btn-text">Sync</span>
+      </button>
     </div>
+  </header>
 
-    <!-- FIREBASE MODULES -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <!-- MAIN SCROLLABLE CONTENT CONTAINER -->
+  <!-- Fixed bottom padding (pb-36) ensures items are never eaten by the footer footer menu -->
+  <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 pb-36 no-scrollbar overflow-y-auto">
 
-        // Firebase Configuration (Uses environment default or public fallback)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'shared-pet-meds-app';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "AIzaSyDemoKeyForPetMedsSync12345",
-                authDomain: "pet-meds-demo.firebaseapp.com",
-                projectId: "pet-meds-demo",
-                storageBucket: "pet-meds-demo.appspot.com",
-                messagingSenderId: "123456789",
-                appId: "1:123456789:web:abcdef123456"
-            };
+    <!-- TAB 1: LOG DOSE (HOME) -->
+    <section id="tab-log" class="tab-content active space-y-5">
+      
+      <!-- Time Slot Selection -->
+      <div>
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Time Slot</label>
+        <div class="grid grid-cols-3 gap-2 bg-slate-200/60 p-1 rounded-2xl border border-slate-200" id="time-slot-selector">
+          <button type="button" onclick="selectTimeSlot('morning')" id="slot-morning" class="time-slot-btn flex flex-col items-center py-2.5 px-2 rounded-xl text-xs font-bold transition-all bg-white text-indigo-600 shadow-sm">
+            <i class="fa-solid fa-sun text-amber-500 text-base mb-1"></i>
+            Morning
+          </button>
+          <button type="button" onclick="selectTimeSlot('afternoon')" id="slot-afternoon" class="time-slot-btn flex flex-col items-center py-2.5 px-2 rounded-xl text-xs font-bold text-slate-600 transition-all hover:text-slate-900">
+            <i class="fa-solid fa-cloud-sun text-orange-400 text-base mb-1"></i>
+            Afternoon
+          </button>
+          <button type="button" onclick="selectTimeSlot('evening')" id="slot-evening" class="time-slot-btn flex flex-col items-center py-2.5 px-2 rounded-xl text-xs font-bold text-slate-600 transition-all hover:text-slate-900">
+            <i class="fa-solid fa-moon text-indigo-400 text-base mb-1"></i>
+            Evening
+          </button>
+        </div>
+      </div>
 
-        let app, db, auth;
-        let unsubscribeLiveSync = null;
+      <!-- Quick Cabinet Selection -->
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-pills text-indigo-500"></i> Select Medication
+          </h2>
+          <button onclick="switchTab('cabinet')" class="text-xs text-indigo-600 font-semibold hover:underline">+ Manage</button>
+        </div>
 
-        // Shared Local State
-        window.state = {
-            householdCode: localStorage.getItem('pet_household_code') || 'CAT-HOUSEHOLD-123',
-            userName: localStorage.getItem('pet_user_name') || 'Partner 1',
-            pet: {
-                name: "Whiskers",
-                age: "3 yrs",
-                weight: "9.5 lbs",
-                photo: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=150&auto=format&fit=crop&q=80"
-            },
-            cabinet: [
-                { id: 'med-1', name: 'Prednisolone', defaultDose: '5', unit: 'mg', notes: 'Anti-inflammatory' },
-                { id: 'med-2', name: 'Gabapentin', defaultDose: '25', unit: 'mg', notes: 'Soothes nerves' }
-            ],
-            logs: [],
-            selectedDate: new Date().toISOString().split('T')[0],
-            currentTab: 'today',
-            historyFilter: 'ALL',
-            isCloudConnected: false
-        };
+        <div id="quick-med-pills" class="flex flex-wrap gap-2 pt-1">
+          <!-- Populated dynamically -->
+        </div>
 
-        async function initFirebase() {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
+        <!-- Custom Med Input Form -->
+        <div class="pt-2 border-t border-slate-100 space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Medication Name</label>
+              <input type="text" id="log-med-name" placeholder="e.g., Prednisolone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Amount</label>
+              <input type="text" id="log-med-amount" placeholder="5 mg" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition">
+            </div>
+          </div>
 
-                // Authenticate
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Date</label>
+              <input type="date" id="log-date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Time</label>
+              <input type="time" id="log-time" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+          </div>
 
-                window.db = db;
-                window.appId = appId;
-                window.state.isCloudConnected = true;
-                updateSyncBadge(true);
-                setupRealtimeSync();
-            } catch (err) {
-                console.warn("Cloud realtime sync running in local offline mode:", err);
-                window.state.isCloudConnected = false;
-                updateSyncBadge(false);
-                loadLocalFallback();
-            }
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Logged By (Optional)</label>
+            <input type="text" id="log-user" placeholder="Your name (e.g., Mom / Dad)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+
+          <button onclick="submitDoseLog()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-md shadow-indigo-200 active:scale-[0.98] transition flex items-center justify-center gap-2 text-sm">
+            <i class="fa-solid fa-check"></i> Save Dose Log
+          </button>
+        </div>
+      </div>
+
+      <!-- TODAY'S TOTALS SUMMARY CARD -->
+      <div class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-4 text-white shadow-md space-y-3">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-indigo-400"></i>
+            <h3 class="text-sm font-bold">Today's Medication Totals</h3>
+          </div>
+          <span class="text-xs text-indigo-200 font-mono" id="today-date-label">Today</span>
+        </div>
+
+        <div id="today-totals-list" class="space-y-2 pt-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: ACTIVE MEDS & DURATION -->
+    <section id="tab-duration" class="tab-content space-y-4">
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80">
+        <h2 class="text-base font-bold text-slate-800 mb-1">Active Treatments</h2>
+        <p class="text-xs text-slate-500 mb-4">Calculated from continuous logged doses up to today.</p>
+
+        <div id="med-duration-list" class="space-y-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: LOG HISTORY -->
+    <section id="tab-history" class="tab-content space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-800">Dose Log History</h2>
+        <span class="text-xs text-slate-400" id="total-logs-count">0 logs</span>
+      </div>
+
+      <div id="history-logs-container" class="space-y-3">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 4: CABINET / MEDICATIONS LIST -->
+    <section id="tab-cabinet" class="tab-content space-y-4">
+      <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 space-y-4">
+        <h2 class="text-base font-bold text-slate-800">Medication Cabinet</h2>
+        <p class="text-xs text-slate-500">Add medications here to quickly select them when logging doses.</p>
+
+        <!-- Add New Med Form -->
+        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2">
+          <input type="text" id="cab-med-name" placeholder="Medication Name (e.g. Gabapentin)" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="text" id="cab-med-dose" placeholder="Default Dose (e.g. 10 mg or 0.5 mL)" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+          
+          <button onclick="addCabinetMed()" class="w-full py-2 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition active:scale-98">
+            + Add to Cabinet
+          </button>
+        </div>
+
+        <div id="cabinet-items-list" class="space-y-2 pt-2">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SYNC MODAL DIALOG -->
+  <div id="sync-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-arrows-rotate text-indigo-600"></i> Sync with Partner
+        </h3>
+        <button onclick="closeSyncModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold hover:bg-slate-200">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Enter the same <strong>Household Code</strong> on both your phone and your wife's phone so all logs sync automatically!
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Household Code</label>
+          <input type="text" id="sync-code-input" placeholder="e.g. PARKER-2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono font-bold uppercase text-indigo-700 tracking-wider focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Your Display Name</label>
+          <input type="text" id="sync-user-input" placeholder="e.g. Mom or Dad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button onclick="saveSyncSettings()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-2xl text-xs hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
+          Connect & Sync Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM FIXED NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 glass-nav border-t border-slate-200/80 px-4 pt-2 pb-safe">
+    <div class="max-w-md mx-auto flex items-center justify-around">
+      <button onclick="switchTab('log')" id="nav-log" class="nav-btn flex flex-col items-center gap-1 text-indigo-600 font-bold transition">
+        <i class="fa-solid fa-circle-plus text-xl"></i>
+        <span class="text-[10px]">Log Dose</span>
+      </button>
+
+      <button onclick="switchTab('duration')" id="nav-duration" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition">
+        <i class="fa-solid fa-calendar-check text-xl"></i>
+        <span class="text-[10px]">Days On</span>
+      </button>
+
+      <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition">
+        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+        <span class="text-[10px]">History</span>
+      </button>
+
+      <button onclick="switchTab('cabinet')" id="nav-cabinet" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition">
+        <i class="fa-solid fa-boxes-stacked text-xl"></i>
+        <span class="text-[10px]">Cabinet</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- APP SCRIPT LOGIC -->
+  <script>
+    // App State
+    let appState = {
+      householdCode: localStorage.getItem('parker_household') || 'PARKER-HOME',
+      userName: localStorage.getItem('parker_username') || '',
+      selectedTimeSlot: 'morning',
+      cabinet: JSON.parse(localStorage.getItem('parker_cabinet')) || [
+        { id: 1, name: 'Prednisolone', dose: '5 mg' },
+        { id: 2, name: 'Gabapentin', dose: '10 mg' },
+        { id: 3, name: 'Atenolol', dose: '6.25 mg' }
+      ],
+      logs: JSON.parse(localStorage.getItem('parker_logs')) || []
+    };
+
+    // Initialize App
+    document.addEventListener('DOMContentLoaded', () => {
+      autoDetectTimeSlot();
+      setDefaultDateTime();
+      renderAll();
+      initSyncEngine();
+    });
+
+    function setDefaultDateTime() {
+      const now = new Date();
+      document.getElementById('log-date').value = now.toISOString().split('T')[0];
+      document.getElementById('log-time').value = now.toTimeString().slice(0, 5);
+      if (appState.userName) {
+        document.getElementById('log-user').value = appState.userName;
+      }
+    }
+
+    function autoDetectTimeSlot() {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) selectTimeSlot('morning');
+      else if (hour >= 12 && hour < 17) selectTimeSlot('afternoon');
+      else selectTimeSlot('evening');
+    }
+
+    function selectTimeSlot(slot) {
+      appState.selectedTimeSlot = slot;
+      document.querySelectorAll('.time-slot-btn').forEach(btn => {
+        btn.className = 'time-slot-btn flex flex-col items-center py-2.5 px-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all';
+      });
+
+      const activeBtn = document.getElementById(`slot-${slot}`);
+      if (activeBtn) {
+        activeBtn.className = 'time-slot-btn flex flex-col items-center py-2.5 px-2 rounded-xl text-xs font-bold transition-all bg-white text-indigo-600 shadow-sm border border-indigo-100';
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.className = 'nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition');
+
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      document.getElementById(`nav-${tabId}`).className = 'nav-btn flex flex-col items-center gap-1 text-indigo-600 font-bold transition';
+    }
+
+    function fillMedInput(name, dose) {
+      document.getElementById('log-med-name').value = name;
+      document.getElementById('log-med-amount').value = dose;
+    }
+
+    function submitDoseLog() {
+      const name = document.getElementById('log-med-name').value.trim();
+      const amount = document.getElementById('log-med-amount').value.trim();
+      const date = document.getElementById('log-date').value;
+      const time = document.getElementById('log-time').value;
+      const user = document.getElementById('log-user').value.trim() || 'Partner';
+
+      if (!name || !amount || !date) {
+        alert('Please fill in medication name, amount, and date.');
+        return;
+      }
+
+      const newLog = {
+        id: 'log_' + Date.now(),
+        medName: name,
+        amount: amount,
+        timeSlot: appState.selectedTimeSlot,
+        date: date,
+        time: time,
+        user: user,
+        timestamp: Date.now()
+      };
+
+      appState.logs.unshift(newLog);
+      saveData();
+      renderAll();
+      syncDataToCloud();
+
+      // Reset Inputs
+      document.getElementById('log-med-name').value = '';
+      document.getElementById('log-med-amount').value = '';
+      alert(`Logged ${name} (${amount})!`);
+    }
+
+    function deleteLog(id) {
+      if (confirm('Delete this dose entry?')) {
+        appState.logs = appState.logs.filter(l => l.id !== id);
+        saveData();
+        renderAll();
+        syncDataToCloud();
+      }
+    }
+
+    function addCabinetMed() {
+      const name = document.getElementById('cab-med-name').value.trim();
+      const dose = document.getElementById('cab-med-dose').value.trim();
+
+      if (!name) return;
+
+      appState.cabinet.push({ id: Date.now(), name, dose: dose || '1 dose' });
+      document.getElementById('cab-med-name').value = '';
+      document.getElementById('cab-med-dose').value = '';
+      saveData();
+      renderAll();
+      syncDataToCloud();
+    }
+
+    function deleteCabinetMed(id) {
+      appState.cabinet = appState.cabinet.filter(c => c.id !== id);
+      saveData();
+      renderAll();
+      syncDataToCloud();
+    }
+
+    function saveData() {
+      localStorage.setItem('parker_logs', JSON.stringify(appState.logs));
+      localStorage.setItem('parker_cabinet', JSON.stringify(appState.cabinet));
+      localStorage.setItem('parker_household', appState.householdCode);
+      localStorage.setItem('parker_username', appState.userName);
+    }
+
+    function renderAll() {
+      renderQuickCabinet();
+      renderTodayTotals();
+      renderDurationTracker();
+      renderHistory();
+      renderCabinetList();
+      
+      document.getElementById('household-btn-text').innerText = appState.householdCode;
+    }
+
+    function renderQuickCabinet() {
+      const container = document.getElementById('quick-med-pills');
+      if (appState.cabinet.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-400 italic">No cabinet meds saved.</span>`;
+        return;
+      }
+
+      container.innerHTML = appState.cabinet.map(med => `
+        <button onclick="fillMedInput('${med.name}', '${med.dose}')" class="px-3 py-1.5 bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-200/80 text-indigo-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
+          <span>${med.name}</span>
+          <span class="text-[10px] text-indigo-500 font-mono">(${med.dose})</span>
+        </button>
+      `).join('');
+    }
+
+    function renderTodayTotals() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('today-date-label').innerText = todayStr;
+
+      const todayLogs = appState.logs.filter(l => l.date === todayStr);
+      const container = document.getElementById('today-totals-list');
+
+      if (todayLogs.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic">No medication logged yet for today.</p>`;
+        return;
+      }
+
+      // Group totals
+      const totals = {};
+      todayLogs.forEach(l => {
+        const key = l.medName;
+        if (!totals[key]) totals[key] = [];
+        totals[key].push(`${l.amount} (${l.timeSlot})`);
+      });
+
+      container.innerHTML = Object.keys(totals).map(med => `
+        <div class="flex items-center justify-between text-xs bg-white/10 rounded-xl px-3 py-2">
+          <span class="font-bold text-white">${med}</span>
+          <span class="text-indigo-200 font-medium">${totals[med].join(' + ')}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderDurationTracker() {
+      const container = document.getElementById('med-duration-list');
+      
+      // Calculate days on active meds
+      const medMap = {};
+      appState.logs.forEach(l => {
+        if (!medMap[l.medName] || new Date(l.date) > new Date(medMap[l.medName].lastDate)) {
+          medMap[l.medName] = {
+            firstDate: medMap[l.medName] ? medMap[l.medName].firstDate : l.date,
+            lastDate: l.date
+          };
+        } else {
+          if (new Date(l.date) < new Date(medMap[l.medName].firstDate)) {
+            medMap[l.medName].firstDate = l.date;
+          }
         }
+      });
 
-        function setupRealtimeSync() {
-            if (!db || !window.state.householdCode) return;
+      const activeMeds = Object.keys(medMap);
 
-            if (unsubscribeLiveSync) unsubscribeLiveSync();
+      if (activeMeds.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic">No medication history available yet.</p>`;
+        return;
+      }
 
-            // Firestore Path complying with Rule 1: /artifacts/{appId}/public/data/{collectionName}
-            const documentRef = doc(db, 'artifacts', appId, 'public', 'data', `household_${window.state.householdCode.toUpperCase()}`);
+      container.innerHTML = activeMeds.map(med => {
+        const first = new Date(medMap[med].firstDate);
+        const today = new Date();
+        const diffTime = Math.abs(today - first);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            unsubscribeLiveSync = onSnapshot(documentRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.pet) window.state.pet = data.pet;
-                    if (data.cabinet) window.state.cabinet = data.cabinet;
-                    if (data.logs) window.state.logs = data.logs;
+        return `
+          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-bold text-slate-800">${med}</h4>
+              <p class="text-[11px] text-slate-500">Started on: ${medMap[med].firstDate}</p>
+            </div>
+            <div class="text-right">
+              <span class="text-lg font-extrabold text-indigo-600">${diffDays}</span>
+              <span class="text-xs text-slate-500 font-medium block">Days on Med</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
-                    window.renderPetHeader();
-                    window.renderTodayView();
-                    window.renderCabinet();
-                    window.renderHistoryView();
-                    window.saveLocalFallback();
-                } else {
-                    // First time household creation - seed initial doc
-                    pushCloudState();
-                }
-            }, (error) => {
-                console.error("Firestore listener error:", error);
-            });
-        }
+    function renderHistory() {
+      const container = document.getElementById('history-logs-container');
+      document.getElementById('total-logs-count').innerText = `${appState.logs.length} logs`;
 
-        async function pushCloudState() {
-            window.saveLocalFallback();
-            if (!db || !auth.currentUser || !window.state.isCloudConnected) return;
+      if (appState.logs.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-6">No historical records logged yet.</p>`;
+        return;
+      }
 
-            try {
-                const documentRef = doc(db, 'artifacts', appId, 'public', 'data', `household_${window.state.householdCode.toUpperCase()}`);
-                await setDoc(documentRef, {
-                    pet: window.state.pet,
-                    cabinet: window.state.cabinet,
-                    logs: window.state.logs,
-                    lastUpdated: new Date().toISOString(),
-                    updatedBy: window.state.userName
-                }, { merge: true });
-            } catch (e) {
-                console.error("Error pushing cloud state:", e);
-            }
-        }
+      container.innerHTML = appState.logs.map(log => `
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-extrabold text-slate-800">${log.medName}</span>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">${log.amount}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 flex items-center gap-2">
+              <span><i class="fa-regular fa-calendar me-1"></i>${log.date} at ${log.time}</span>
+              <span>•</span>
+              <span class="capitalize text-slate-600 font-medium">${log.timeSlot}</span>
+            </div>
+            ${log.user ? `<p class="text-[10px] text-indigo-500 font-semibold">Logged by: ${log.user}</p>` : ''}
+          </div>
 
-        function updateSyncBadge(online) {
-            const badge = document.getElementById('syncIndicator');
-            if (online) {
-                badge.className = "absolute bottom-0 right-0 bg-emerald-500 w-3 h-3 rounded-full border-2 border-white dark:border-ios-darkCard";
-                badge.title = "Realtime Household Synced";
-            } else {
-                badge.className = "absolute bottom-0 right-0 bg-amber-500 w-3 h-3 rounded-full border-2 border-white dark:border-ios-darkCard";
-                badge.title = "Local Mode";
-            }
-        }
+          <button onclick="deleteLog('${log.id}')" class="text-slate-300 hover:text-red-500 p-2 transition">
+            <i class="fa-regular fa-trash-can text-sm"></i>
+          </button>
+        </div>
+      `).join('');
+    }
 
-        window.pushCloudState = pushCloudState;
-        window.setupRealtimeSync = setupRealtimeSync;
+    function renderCabinetList() {
+      const container = document.getElementById('cabinet-items-list');
+      if (appState.cabinet.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic">No cabinet items.</p>`;
+        return;
+      }
 
-        // Initialize on load
-        window.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
+      container.innerHTML = appState.cabinet.map(med => `
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-slate-800">${med.name}</span>
+            <span class="text-xs text-slate-500 font-mono block">${med.dose}</span>
+          </div>
+          <button onclick="deleteCabinetMed(${med.id})" class="text-slate-400 hover:text-red-500 p-1.5">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Modal Control
+    function openSyncModal() {
+      document.getElementById('sync-code-input').value = appState.householdCode;
+      document.getElementById('sync-user-input').value = appState.userName;
+      document.getElementById('sync-modal').classList.remove('hidden');
+    }
+
+    function closeSyncModal() {
+      document.getElementById('sync-modal').classList.add('hidden');
+    }
+
+    function saveSyncSettings() {
+      const code = document.getElementById('sync-code-input').value.trim().toUpperCase();
+      const user = document.getElementById('sync-user-input').value.trim();
+
+      if (code) {
+        appState.householdCode = code;
+        appState.userName = user;
+        saveData();
+        renderAll();
+        closeSyncModal();
+        syncDataToCloud();
+        alert(`Connected to household code: ${code}`);
+      }
+    }
+
+    // REALTIME CLOUD SYNC ENGINE
+    function initSyncEngine() {
+      syncFetchFromCloud();
+      setInterval(syncFetchFromCloud, 4000); // Poll every 4 seconds for updates from spouse
+    }
+
+    function syncDataToCloud() {
+      if (!appState.householdCode) return;
+
+      const payload = {
+        code: appState.householdCode,
+        logs: appState.logs,
+        cabinet: appState.cabinet,
+        updatedAt: Date.now()
+      };
+
+      fetch(`https://kvdb.io/4y932bvhJ2y8Yx8Z29/${appState.householdCode}`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }).then(() => {
+        updateSyncStatus(true);
+      }).catch(() => {
+        updateSyncStatus(false);
+      });
+    }
+
+    function syncFetchFromCloud() {
+      if (!appState.householdCode) return;
+
+      fetch(`https://kvdb.io/4y932bvhJ2y8Yx8Z29/${appState.householdCode}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.logs) {
+            // Merge remote logs if updated
+            appState.logs = data.logs;
+            if (data.cabinet) appState.cabinet = data.cabinet;
+            saveData();
+            renderAll();
+            updateSyncStatus(true);
+          }
+        })
+        .catch(() => {
+          updateSyncStatus(false);
         });
-    </script>
-
-    <script>
-        // --- LOCAL FALLBACK & SYNC HELPERS ---
-        function saveLocalFallback() {
-            localStorage.setItem('pet_med_state_v2', JSON.stringify({
-                pet: window.state.pet,
-                cabinet: window.state.cabinet,
-                logs: window.state.logs
-            }));
-            localStorage.setItem('pet_household_code', window.state.householdCode);
-            localStorage.setItem('pet_user_name', window.state.userName);
-        }
-
-        function loadLocalFallback() {
-            const stored = localStorage.getItem('pet_med_state_v2');
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    window.state.pet = parsed.pet || window.state.pet;
-                    window.state.cabinet = parsed.cabinet || window.state.cabinet;
-                    window.state.logs = parsed.logs || window.state.logs;
-                } catch(e) {}
-            }
-            renderPetHeader();
-            renderTodayView();
-            renderCabinet();
-            renderHistoryView();
-        }
-
-        // --- HOUSEHOLD MANAGEMENT ---
-        function openHouseholdModal() {
-            document.getElementById('householdCodeInput').value = window.state.householdCode;
-            document.getElementById('userNameInput').value = window.state.userName;
-            document.getElementById('householdModal').classList.remove('hidden');
-        }
-
-        function saveHouseholdSettings() {
-            const newCode = document.getElementById('householdCodeInput').value.trim().toUpperCase() || 'CAT-123';
-            const newUserName = document.getElementById('userNameInput').value.trim() || 'Partner';
-
-            window.state.householdCode = newCode;
-            window.state.userName = newUserName;
-
-            saveLocalFallback();
-            document.getElementById('headerHouseholdCode').textContent = `Code: ${newCode}`;
-
-            if (window.setupRealtimeSync) {
-                window.setupRealtimeSync();
-            }
-
-            closeModal('householdModal');
-            showToast(`Connected to Household: ${newCode}`);
-        }
-
-        function copyHouseholdCode() {
-            const code = document.getElementById('householdCodeInput').value;
-            const temp = document.createElement('textarea');
-            temp.value = code;
-            document.body.appendChild(temp);
-            temp.select();
-            document.execCommand('copy');
-            document.body.removeChild(temp);
-            showToast("Household code copied!");
-        }
-
-        // --- NAVIGATION & VIEWS ---
-        function switchTab(tabName) {
-            window.state.currentTab = tabName;
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-
-            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-                btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
-                btn.classList.add('text-gray-400', 'dark:text-gray-500');
-            });
-            document.getElementById(`nav-${tabName}`).classList.remove('text-gray-400', 'dark:text-gray-500');
-            document.getElementById(`nav-${tabName}`).classList.add('text-indigo-600', 'dark:text-indigo-400');
-
-            if (tabName === 'today') renderTodayView();
-            if (tabName === 'cabinet') renderCabinet();
-            if (tabName === 'history') renderHistoryView();
-        }
-
-        function navigateDate(offset) {
-            const curr = new Date(window.state.selectedDate + 'T00:00:00');
-            curr.setDate(curr.getDate() + offset);
-            window.state.selectedDate = curr.toISOString().split('T')[0];
-            renderTodayView();
-        }
-
-        function formatDisplayDate(dateStr) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            if (dateStr === todayStr) return "Today";
-            if (dateStr === yesterdayStr) return "Yesterday";
-
-            const parts = dateStr.split('-');
-            const d = new Date(parts[0], parts[1] - 1, parts[2]);
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        function formatFullDate(dateStr) {
-            const parts = dateStr.split('-');
-            const d = new Date(parts[0], parts[1] - 1, parts[2]);
-            return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        }
-
-        // --- TODAY VIEW & TOTALS BREAKDOWN ---
-        function renderTodayView() {
-            document.getElementById('selectedDateDisplay').textContent = formatDisplayDate(window.state.selectedDate);
-            document.getElementById('selectedFullDateDisplay').textContent = formatFullDate(window.state.selectedDate);
-
-            const dayLogs = window.state.logs.filter(l => l.date === window.state.selectedDate);
-
-            // Daily Totals calculation
-            const totalsMap = {};
-            dayLogs.forEach(log => {
-                const key = `${log.medName} (${log.unit})`;
-                totalsMap[key] = (totalsMap[key] || 0) + parseFloat(log.dose || 0);
-            });
-
-            const totalsContainer = document.getElementById('dailyTotalsContainer');
-            const totalsCountTag = document.getElementById('dailyTotalsCountTag');
-            const entries = Object.entries(totalsMap);
-
-            totalsCountTag.textContent = `${entries.length} Meds Logged Today`;
-
-            if (entries.length === 0) {
-                totalsContainer.innerHTML = `<p class="text-xs text-indigo-100 italic">No medication logged for this date yet.</p>`;
-            } else {
-                totalsContainer.innerHTML = entries.map(([medUnit, total]) => `
-                    <div class="flex items-center justify-between bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm">
-                        <span class="font-medium text-sm text-white">${medUnit.split(' (')[0]}</span>
-                        <span class="font-bold text-sm bg-white/20 px-2.5 py-0.5 rounded-lg text-white">${total} ${medUnit.split('(')[1].replace(')', '')}</span>
-                    </div>
-                `).join('');
-            }
-
-            // Time slots
-            const slots = ['Morning', 'Afternoon', 'Evening'];
-            let filledSlots = 0;
-
-            slots.forEach(slot => {
-                const slotContainer = document.getElementById(`slot-${slot}-logs`);
-                const slotLogs = dayLogs.filter(l => l.slot === slot);
-
-                if (slotLogs.length > 0) filledSlots++;
-
-                if (slotLogs.length === 0) {
-                    slotContainer.innerHTML = `<p class="text-xs text-gray-400 italic py-1">No doses recorded</p>`;
-                } else {
-                    slotContainer.innerHTML = slotLogs.map(log => `
-                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800">
-                            <div class="flex items-center space-x-2.5">
-                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                <div>
-                                    <div class="flex items-center space-x-1.5">
-                                        <span class="font-bold text-sm text-gray-900 dark:text-white">${log.medName}</span>
-                                        <span class="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md font-semibold">${log.dose} ${log.unit}</span>
-                                    </div>
-                                    <div class="text-[11px] text-gray-400 mt-0.5 flex items-center space-x-2">
-                                        <span>${log.loggedBy ? `<i class="fa-regular fa-user mr-1"></i>${log.loggedBy}` : ''}</span>
-                                        ${log.notes ? `<span>• ${log.notes}</span>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs font-semibold text-gray-400">${formatTime12H(log.time)}</span>
-                                <button onclick="deleteLog('${log.id}')" class="text-gray-400 hover:text-red-500 text-xs p-1">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            });
-
-            document.getElementById('slotProgressText').textContent = `${filledSlots} / 3 Slots Logged`;
-            renderDurationTracker();
-        }
-
-        // Continuous days counter
-        function renderDurationTracker() {
-            const container = document.getElementById('durationTrackerContainer');
-            const medNames = Array.from(new Set([
-                ...window.state.cabinet.map(m => m.name),
-                ...window.state.logs.map(l => l.medName)
-            ]));
-
-            if (medNames.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-400 italic">No active medications found.</p>`;
-                return;
-            }
-
-            const activeCourses = medNames.map(medName => {
-                const medLogs = window.state.logs.filter(l => l.medName.toLowerCase() === medName.toLowerCase());
-                if (medLogs.length === 0) return null;
-
-                const uniqueDates = Array.from(new Set(medLogs.map(l => l.date))).sort();
-                return {
-                    medName,
-                    daysCount: uniqueDates.length,
-                    firstDate: uniqueDates[0]
-                };
-            }).filter(Boolean);
-
-            if (activeCourses.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-400 italic">Log a dose to start tracking days on medication!</p>`;
-                return;
-            }
-
-            container.innerHTML = activeCourses.map(course => `
-                <div class="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                    <div>
-                        <div class="font-bold text-sm text-gray-900 dark:text-white">${course.medName}</div>
-                        <div class="text-[11px] text-gray-400">Started: ${formatDisplayDate(course.firstDate)}</div>
-                    </div>
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        <i class="fa-solid fa-fire mr-1 text-emerald-500"></i> ${course.daysCount} ${course.daysCount === 1 ? 'day' : 'days'}
-                    </span>
-                </div>
-            `).join('');
-        }
-
-        // --- MED CABINET ---
-        function renderCabinet() {
-            const container = document.getElementById('cabinetListContainer');
-            if (window.state.cabinet.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="fa-solid fa-pills text-3xl mb-2"></i>
-                        <p class="text-sm">Cabinet is empty.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = window.state.cabinet.map(med => `
-                <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <h3 class="font-bold text-base text-gray-900 dark:text-white">${med.name}</h3>
-                            <span class="text-xs font-semibold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-md">Default: ${med.defaultDose || '--'} ${med.unit}</span>
-                        </div>
-                        ${med.notes ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"><i class="fa-solid fa-info-circle mr-1"></i>${med.notes}</p>` : ''}
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button onclick="openQuickDoseFromCabinet('${med.id}')" class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 active:scale-95 transition">
-                            <i class="fa-solid fa-plus text-sm"></i>
-                        </button>
-                        <button onclick="deleteCabinetMed('${med.id}')" class="p-2.5 rounded-xl text-gray-400 hover:text-red-500 active:scale-95 transition">
-                            <i class="fa-solid fa-trash-can text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function openAddMedModal() {
-            document.getElementById('addMedForm').reset();
-            document.getElementById('cabinetMedId').value = '';
-            document.getElementById('addMedModalTitle').textContent = "Add Medication to Cabinet";
-            document.getElementById('addMedModal').classList.remove('hidden');
-        }
-
-        function handleSaveCabinetMed(e) {
-            e.preventDefault();
-            const id = document.getElementById('cabinetMedId').value || 'med-' + Date.now();
-            const name = document.getElementById('cabinetMedName').value.trim();
-            const defaultDose = document.getElementById('cabinetMedDefaultDose').value.trim();
-            const unit = document.getElementById('cabinetMedUnit').value;
-            const notes = document.getElementById('cabinetMedNotes').value.trim();
-
-            const existingIdx = window.state.cabinet.findIndex(m => m.id === id);
-            const medObj = { id, name, defaultDose, unit, notes };
-
-            if (existingIdx >= 0) {
-                window.state.cabinet[existingIdx] = medObj;
-            } else {
-                window.state.cabinet.push(medObj);
-            }
-
-            if (window.pushCloudState) window.pushCloudState();
-            closeModal('addMedModal');
-            renderCabinet();
-            showToast(`Saved ${name}`);
-        }
-
-        function deleteCabinetMed(id) {
-            window.state.cabinet = window.state.cabinet.filter(m => m.id !== id);
-            if (window.pushCloudState) window.pushCloudState();
-            renderCabinet();
-            showToast("Medication removed");
-        }
-
-        function openQuickDoseFromCabinet(medId) {
-            const med = window.state.cabinet.find(m => m.id === medId);
-            if (!med) return;
-            switchTab('today');
-            openLogDoseModal(getAutoSlot(), med.name, med.defaultDose, med.unit);
-        }
-
-        // --- DOSE LOGGING ---
-        function getAutoSlot() {
-            const h = new Date().getHours();
-            if (h >= 5 && h < 12) return 'Morning';
-            if (h >= 12 && h < 17) return 'Afternoon';
-            return 'Evening';
-        }
-
-        function openLogDoseModal(slot = null, prefillMed = '', prefillDose = '', prefillUnit = '') {
-            document.getElementById('logDoseForm').reset();
-            document.getElementById('doseSlot').value = slot || getAutoSlot();
-
-            const now = new Date();
-            document.getElementById('doseTime').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-            const pillsContainer = document.getElementById('quickSelectMedsPills');
-            pillsContainer.innerHTML = window.state.cabinet.map(med => `
-                <button type="button" onclick="selectQuickMedPill('${med.name}', '${med.defaultDose}', '${med.unit}')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 active:scale-95 transition flex items-center space-x-1">
-                    <i class="fa-solid fa-capsules text-indigo-500"></i>
-                    <span>${med.name}</span>
-                </button>
-            `).join('');
-
-            if (prefillMed) {
-                document.getElementById('doseMedName').value = prefillMed;
-                document.getElementById('doseAmount').value = prefillDose;
-                document.getElementById('doseUnit').value = prefillUnit || 'mg';
-            }
-
-            document.getElementById('logDoseModal').classList.remove('hidden');
-        }
-
-        function selectQuickMedPill(name, dose, unit) {
-            document.getElementById('doseMedName').value = name;
-            if (dose) document.getElementById('doseAmount').value = dose;
-            if (unit) document.getElementById('doseUnit').value = unit;
-        }
-
-        function handleSaveDose(e) {
-            e.preventDefault();
-            const newLog = {
-                id: 'log-' + Date.now(),
-                date: window.state.selectedDate,
-                slot: document.getElementById('doseSlot').value,
-                time: document.getElementById('doseTime').value,
-                medName: document.getElementById('doseMedName').value.trim(),
-                dose: document.getElementById('doseAmount').value.trim(),
-                unit: document.getElementById('doseUnit').value,
-                notes: document.getElementById('doseNotes').value.trim(),
-                loggedBy: window.state.userName
-            };
-
-            window.state.logs.push(newLog);
-            if (window.pushCloudState) window.pushCloudState();
-            closeModal('logDoseModal');
-            renderTodayView();
-            showToast(`Logged ${newLog.dose}${newLog.unit} ${newLog.medName}`);
-        }
-
-        function deleteLog(id) {
-            window.state.logs = window.state.logs.filter(l => l.id !== id);
-            if (window.pushCloudState) window.pushCloudState();
-            renderTodayView();
-            renderHistoryView();
-            showToast("Log entry deleted");
-        }
-
-        // --- HISTORY & STATS ---
-        function renderHistoryView() {
-            const medNames = Array.from(new Set(window.state.logs.map(l => l.medName)));
-            const filtersContainer = document.getElementById('historyMedFilters');
-            filtersContainer.innerHTML = medNames.map(med => `
-                <button onclick="filterHistory('${med}')" id="historyFilter-${med}" class="history-filter-btn px-3 py-1.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
-                    ${med}
-                </button>
-            `).join('');
-
-            let filtered = [...window.state.logs].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
-            if (window.state.historyFilter !== 'ALL') {
-                filtered = filtered.filter(l => l.medName.toLowerCase() === window.state.historyFilter.toLowerCase());
-            }
-
-            const timelineContainer = document.getElementById('fullHistoryTimeline');
-            if (filtered.length === 0) {
-                timelineContainer.innerHTML = `<div class="text-center py-10 text-gray-400 text-sm">No recorded history.</div>`;
-                return;
-            }
-
-            const grouped = {};
-            filtered.forEach(log => {
-                if (!grouped[log.date]) grouped[log.date] = [];
-                grouped[log.date].push(log);
-            });
-
-            timelineContainer.innerHTML = Object.entries(grouped).map(([date, logs]) => `
-                <div class="space-y-2">
-                    <div class="sticky top-14 z-10 bg-ios-bg/90 dark:bg-ios-darkBg/90 backdrop-blur-md py-1 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
-                        ${formatFullDate(date)}
-                    </div>
-                    <div class="space-y-2">
-                        ${logs.map(log => `
-                            <div class="bg-white dark:bg-ios-darkCard rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
-                                        ${log.slot.substring(0, 3)}
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center space-x-2">
-                                            <span class="font-bold text-sm text-gray-900 dark:text-white">${log.medName}</span>
-                                            <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded font-semibold">${log.dose} ${log.unit}</span>
-                                        </div>
-                                        <div class="text-xs text-gray-400 mt-0.5">
-                                            <span>${formatTime12H(log.time)}</span>
-                                            ${log.loggedBy ? ` • Logged by <span class="font-semibold text-gray-600 dark:text-gray-300">${log.loggedBy}</span>` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onclick="deleteLog('${log.id}')" class="text-gray-400 hover:text-red-500 p-2">
-                                    <i class="fa-solid fa-trash-can text-xs"></i>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function filterHistory(med) {
-            window.state.historyFilter = med;
-            renderHistoryView();
-        }
-
-        // --- PET PROFILE ---
-        function renderPetHeader() {
-            document.getElementById('headerPetName').textContent = window.state.pet.name || 'Whiskers';
-            document.getElementById('headerPetSubtext').textContent = `${window.state.pet.age || '3 yrs'} • ${window.state.pet.weight || '9.5 lbs'}`;
-            document.getElementById('headerHouseholdCode').textContent = `Code: ${window.state.householdCode}`;
-            if (window.state.pet.photo) document.getElementById('headerPetAvatar').src = window.state.pet.photo;
-        }
-
-        function openPetProfileModal() {
-            document.getElementById('petNameInput').value = window.state.pet.name || '';
-            document.getElementById('petAgeInput').value = window.state.pet.age || '';
-            document.getElementById('petWeightInput').value = window.state.pet.weight || '';
-            document.getElementById('petPhotoInput').value = window.state.pet.photo || '';
-            document.getElementById('petProfileModal').classList.remove('hidden');
-        }
-
-        function handleSavePetProfile(e) {
-            e.preventDefault();
-            window.state.pet = {
-                name: document.getElementById('petNameInput').value.trim() || 'Whiskers',
-                age: document.getElementById('petAgeInput').value.trim(),
-                weight: document.getElementById('petWeightInput').value.trim(),
-                photo: document.getElementById('petPhotoInput').value.trim()
-            };
-            if (window.pushCloudState) window.pushCloudState();
-            renderPetHeader();
-            closeModal('petProfileModal');
-            showToast("Pet profile updated!");
-        }
-
-        // --- EXPORT & UTILS ---
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.state, null, 2));
-            const a = document.createElement('a');
-            a.href = dataStr;
-            a.download = `household_med_backup_${window.state.householdCode}.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
-        function formatTime12H(time24) {
-            if (!time24) return '';
-            const [h, m] = time24.split(':');
-            let hours = parseInt(h, 10);
-            const suffix = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12 || 12;
-            return `${hours}:${m} ${suffix}`;
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = msg;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2500);
-        }
-
-        function toggleDarkMode() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-sm text-amber-400' : 'fa-solid fa-moon text-sm text-gray-600';
-        }
-
-        // Expose functions to global scope
-        window.switchTab = switchTab;
-        window.navigateDate = navigateDate;
-        window.openHouseholdModal = openHouseholdModal;
-        window.saveHouseholdSettings = saveHouseholdSettings;
-        window.copyHouseholdCode = copyHouseholdCode;
-        window.openAddMedModal = openAddMedModal;
-        window.handleSaveCabinetMed = handleSaveCabinetMed;
-        window.deleteCabinetMed = deleteCabinetMed;
-        window.openQuickDoseFromCabinet = openQuickDoseFromCabinet;
-        window.openLogDoseModal = openLogDoseModal;
-        window.selectQuickMedPill = selectQuickMedPill;
-        window.handleSaveDose = handleSaveDose;
-        window.deleteLog = deleteLog;
-        window.filterHistory = filterHistory;
-        window.openPetProfileModal = openPetProfileModal;
-        window.handleSavePetProfile = handleSavePetProfile;
-        window.openSettingsModal = () => document.getElementById('settingsModal').classList.remove('hidden');
-        window.exportData = exportData;
-        window.closeModal = closeModal;
-        window.toggleDarkMode = toggleDarkMode;
-        window.renderPetHeader = renderPetHeader;
-        window.renderTodayView = renderTodayView;
-        window.renderCabinet = renderCabinet;
-        window.renderHistoryView = renderHistoryView;
-        window.saveLocalFallback = saveLocalFallback;
-    </script>
+    }
+
+    function updateSyncStatus(online) {
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-status-text');
+
+      if (online) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse';
+        text.innerText = `Synced (${appState.householdCode})`;
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500 inline-block';
+        text.innerText = `Offline (${appState.householdCode})`;
+      }
+    }
+  </script>
 </body>
 </html>
