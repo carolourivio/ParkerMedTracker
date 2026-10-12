@@ -10,6 +10,9 @@
   
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- PeerJS Direct WebRTC Sync Library -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -21,32 +24,18 @@
       background-color: #f8fafc;
     }
 
-    /* iOS Safe Area Spacing */
-    .pb-safe {
-      padding-bottom: max(env(safe-area-inset-bottom), 1.25rem);
-    }
-    
-    .pt-safe {
-      padding-top: max(env(safe-area-inset-top), 1rem);
-    }
+    .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1.25rem); }
+    .pt-safe { padding-top: max(env(safe-area-inset-top), 1rem); }
 
-    /* Glassmorphism Header */
     .glass-nav {
       background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
 
-    /* Custom Scrollbar Hide */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Smooth Tab Transitions */
     .tab-content {
       display: none;
       opacity: 0;
@@ -74,14 +63,14 @@
           <h1 class="text-lg font-bold tracking-tight text-slate-900 leading-tight">Parker's Meds</h1>
           <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5" id="sync-status-badge">
             <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="sync-dot"></span>
-            <span id="sync-status-text">Local Storage</span>
+            <span id="sync-status-text">Connecting...</span>
           </p>
         </div>
       </div>
 
       <!-- Sync Setup Button -->
       <button onclick="openSyncModal()" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/60 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
-        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <i class="fa-solid fa-satellite-dish"></i>
         <span id="household-btn-text">Sync</span>
       </button>
     </div>
@@ -230,30 +219,30 @@
     <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-          <i class="fa-solid fa-arrows-rotate text-indigo-600"></i> Sync Devices
+          <i class="fa-solid fa-satellite-dish text-indigo-600"></i> Direct Phone Sync
         </h3>
         <button onclick="closeSyncModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold hover:bg-slate-200">&times;</button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
-        Type the exact same <strong>Household Code</strong> on all devices (computer, iPhone, wife's phone) to sync in real-time!
+        Enter the same <strong>Household Code</strong> on both your phone and your wife's phone to pair them directly over WebRTC!
       </p>
 
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-500 mb-1">Household Code</label>
-          <input type="text" id="sync-code-input" placeholder="e.g. PARKER-2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono font-bold uppercase text-indigo-700 tracking-wider focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input type="text" id="sync-code-input" placeholder="e.g. PARKER2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono font-bold uppercase text-indigo-700 tracking-wider focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Your Name</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Your Display Name</label>
           <input type="text" id="sync-user-input" placeholder="e.g. Mom or Dad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
       </div>
 
       <div class="pt-2 flex flex-col gap-2">
         <button onclick="saveSyncSettings()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-2xl text-xs hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
-          Connect & Sync Now
+          Connect & Pair Phones
         </button>
       </div>
     </div>
@@ -284,15 +273,10 @@
     </div>
   </nav>
 
-  <!-- FIREBASE REALTIME CLOUD LIBRARIES -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
   <!-- APP SCRIPT LOGIC -->
   <script>
-    // App State
     let appState = {
-      householdCode: localStorage.getItem('parker_household') || 'PARKER-HOME',
+      householdCode: localStorage.getItem('parker_household') || 'PARKER2026',
       userName: localStorage.getItem('parker_username') || '',
       selectedTimeSlot: 'morning',
       cabinet: JSON.parse(localStorage.getItem('parker_cabinet')) || [
@@ -303,80 +287,93 @@
       logs: JSON.parse(localStorage.getItem('parker_logs')) || []
     };
 
-    // Firebase Global Setup
-    let firebaseDb = null;
-    let firebaseRef = null;
+    let peer = null;
+    let connections = [];
 
     document.addEventListener('DOMContentLoaded', () => {
       autoDetectTimeSlot();
       setDefaultDateTime();
       renderAll();
-      initFirebaseCloud();
+      initPeerSync();
     });
 
-    function initFirebaseCloud() {
-      try {
-        const firebaseConfig = {
-          databaseURL: "https://cat-meds-tracker-default-rtdb.firebaseio.com/"
-        };
-        if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
-        }
-        firebaseDb = firebase.database();
-        connectHouseholdCloud();
-      } catch (err) {
-        console.error("Firebase init fallback:", err);
-      }
-    }
-
-    function connectHouseholdCloud() {
-      if (!firebaseDb || !appState.householdCode) return;
-
+    // PEERJS WEBRTC DIRECT DIRECT PHONE SYNC
+    function initPeerSync() {
       const cleanCode = appState.householdCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      
-      if (firebaseRef) {
-        firebaseRef.off();
-      }
+      const myPeerId = `parker_${cleanCode}_${Math.random().toString(36).substr(2, 6)}`;
 
-      firebaseRef = firebaseDb.ref('households/' + cleanCode);
+      if (peer) peer.destroy();
 
-      // Realtime listener - fires whenever ANY device updates data
-      firebaseRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          if (data.logs) appState.logs = data.logs;
-          if (data.cabinet) appState.cabinet = data.cabinet;
-          saveLocalData();
-          renderAll();
-        }
-        updateSyncStatus(true);
-      }, (err) => {
-        updateSyncStatus(false);
+      peer = new Peer(myPeerId, { debug: 1 });
+
+      peer.on('open', (id) => {
+        updateSyncStatus(true, `Ready (${cleanCode})`);
+        findAndConnectPeers(cleanCode);
+      });
+
+      peer.on('connection', (conn) => {
+        setupConn(conn);
+      });
+
+      peer.on('error', (err) => {
+        updateSyncStatus(false, 'Local Storage');
       });
     }
 
-    function syncDataToCloud() {
-      if (!firebaseRef) return;
-      
-      const payload = {
-        logs: appState.logs,
-        cabinet: appState.cabinet,
-        lastUpdatedBy: appState.userName || 'Device',
-        updatedAt: Date.now()
-      };
+    function findAndConnectPeers(code) {
+      // Connect to common household peer room endpoint
+      const targetPeerId = `parker_${code}_main`;
+      if (peer.id !== targetPeerId) {
+        const conn = peer.connect(targetPeerId);
+        setupConn(conn);
+      }
+    }
 
-      firebaseRef.set(payload).catch(err => {
-        console.error("Cloud push failed:", err);
+    function setupConn(conn) {
+      conn.on('open', () => {
+        connections.push(conn);
+        updateSyncStatus(true, `Paired Direct!`);
+        // Send our local logs to partner
+        conn.send({ type: 'SYNC_DATA', logs: appState.logs, cabinet: appState.cabinet });
       });
+
+      conn.on('data', (data) => {
+        if (data.type === 'SYNC_DATA') {
+          mergeRemoteData(data.logs, data.cabinet);
+        }
+      });
+
+      conn.on('close', () => {
+        connections = connections.filter(c => c !== conn);
+      });
+    }
+
+    function broadcastState() {
+      connections.forEach(conn => {
+        if (conn.open) {
+          conn.send({ type: 'SYNC_DATA', logs: appState.logs, cabinet: appState.cabinet });
+        }
+      });
+    }
+
+    function mergeRemoteData(remoteLogs, remoteCabinet) {
+      if (!remoteLogs) return;
+      const map = {};
+      appState.logs.forEach(l => map[l.id] = l);
+      remoteLogs.forEach(l => map[l.id] = l);
+
+      appState.logs = Object.values(map).sort((a,b) => b.timestamp - a.timestamp);
+      if (remoteCabinet && remoteCabinet.length) appState.cabinet = remoteCabinet;
+
+      saveLocalData();
+      renderAll();
     }
 
     function setDefaultDateTime() {
       const now = new Date();
       document.getElementById('log-date').value = now.toISOString().split('T')[0];
       document.getElementById('log-time').value = now.toTimeString().slice(0, 5);
-      if (appState.userName) {
-        document.getElementById('log-user').value = appState.userName;
-      }
+      if (appState.userName) document.getElementById('log-user').value = appState.userName;
     }
 
     function autoDetectTimeSlot() {
@@ -437,7 +434,7 @@
       appState.logs.unshift(newLog);
       saveLocalData();
       renderAll();
-      syncDataToCloud();
+      broadcastState();
 
       document.getElementById('log-med-name').value = '';
       document.getElementById('log-med-amount').value = '';
@@ -449,7 +446,7 @@
         appState.logs = appState.logs.filter(l => l.id !== id);
         saveLocalData();
         renderAll();
-        syncDataToCloud();
+        broadcastState();
       }
     }
 
@@ -464,14 +461,14 @@
       document.getElementById('cab-med-dose').value = '';
       saveLocalData();
       renderAll();
-      syncDataToCloud();
+      broadcastState();
     }
 
     function deleteCabinetMed(id) {
       appState.cabinet = appState.cabinet.filter(c => c.id !== id);
       saveLocalData();
       renderAll();
-      syncDataToCloud();
+      broadcastState();
     }
 
     function saveLocalData() {
@@ -487,7 +484,6 @@
       renderDurationTracker();
       renderHistory();
       renderCabinetList();
-      
       document.getElementById('household-btn-text').innerText = appState.householdCode;
     }
 
@@ -535,7 +531,6 @@
 
     function renderDurationTracker() {
       const container = document.getElementById('med-duration-list');
-      
       const medMap = {};
       appState.logs.forEach(l => {
         if (!medMap[l.medName] || new Date(l.date) > new Date(medMap[l.medName].lastDate)) {
@@ -629,7 +624,6 @@
       `).join('');
     }
 
-    // Modal Control
     function openSyncModal() {
       document.getElementById('sync-code-input').value = appState.householdCode;
       document.getElementById('sync-user-input').value = appState.userName;
@@ -650,20 +644,20 @@
         saveLocalData();
         renderAll();
         closeSyncModal();
-        connectHouseholdCloud();
+        initPeerSync();
       }
     }
 
-    function updateSyncStatus(online) {
+    function updateSyncStatus(online, label) {
       const dot = document.getElementById('sync-dot');
       const text = document.getElementById('sync-status-text');
 
       if (online) {
         dot.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse';
-        text.innerText = `Live Cloud (${appState.householdCode})`;
+        text.innerText = label || `Live (${appState.householdCode})`;
       } else {
         dot.className = 'w-2 h-2 rounded-full bg-amber-500 inline-block';
-        text.innerText = `Offline (${appState.householdCode})`;
+        text.innerText = label || `Local Storage`;
       }
     }
   </script>
