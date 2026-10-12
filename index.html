@@ -11,7 +11,6 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Custom Styling & Animations -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
@@ -89,7 +88,6 @@
   </header>
 
   <!-- MAIN SCROLLABLE CONTENT CONTAINER -->
-  <!-- Fixed bottom padding (pb-36) ensures items are never eaten by the footer footer menu -->
   <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 pb-36 no-scrollbar overflow-y-auto">
 
     <!-- TAB 1: LOG DOSE (HOME) -->
@@ -229,16 +227,16 @@
 
   <!-- SYNC MODAL DIALOG -->
   <div id="sync-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+    <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-          <i class="fa-solid fa-arrows-rotate text-indigo-600"></i> Sync with Partner
+          <i class="fa-solid fa-arrows-rotate text-indigo-600"></i> Sync Devices
         </h3>
         <button onclick="closeSyncModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold hover:bg-slate-200">&times;</button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
-        Enter the same <strong>Household Code</strong> on both your phone and your wife's phone so all logs sync automatically!
+        Type the exact same <strong>Household Code</strong> on all devices (computer, iPhone, wife's phone) to sync in real-time!
       </p>
 
       <div class="space-y-3">
@@ -248,13 +246,13 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Your Display Name</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Your Name</label>
           <input type="text" id="sync-user-input" placeholder="e.g. Mom or Dad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
       </div>
 
-      <div class="pt-2 flex gap-2">
-        <button onclick="saveSyncSettings()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-2xl text-xs hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
+      <div class="pt-2 flex flex-col gap-2">
+        <button onclick="saveSyncSettings()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-2xl text-xs hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
           Connect & Sync Now
         </button>
       </div>
@@ -286,6 +284,10 @@
     </div>
   </nav>
 
+  <!-- FIREBASE REALTIME CLOUD LIBRARIES -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
   <!-- APP SCRIPT LOGIC -->
   <script>
     // App State
@@ -301,13 +303,72 @@
       logs: JSON.parse(localStorage.getItem('parker_logs')) || []
     };
 
-    // Initialize App
+    // Firebase Global Setup
+    let firebaseDb = null;
+    let firebaseRef = null;
+
     document.addEventListener('DOMContentLoaded', () => {
       autoDetectTimeSlot();
       setDefaultDateTime();
       renderAll();
-      initSyncEngine();
+      initFirebaseCloud();
     });
+
+    function initFirebaseCloud() {
+      try {
+        const firebaseConfig = {
+          databaseURL: "https://cat-meds-tracker-default-rtdb.firebaseio.com/"
+        };
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        firebaseDb = firebase.database();
+        connectHouseholdCloud();
+      } catch (err) {
+        console.error("Firebase init fallback:", err);
+      }
+    }
+
+    function connectHouseholdCloud() {
+      if (!firebaseDb || !appState.householdCode) return;
+
+      const cleanCode = appState.householdCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      
+      if (firebaseRef) {
+        firebaseRef.off();
+      }
+
+      firebaseRef = firebaseDb.ref('households/' + cleanCode);
+
+      // Realtime listener - fires whenever ANY device updates data
+      firebaseRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          if (data.logs) appState.logs = data.logs;
+          if (data.cabinet) appState.cabinet = data.cabinet;
+          saveLocalData();
+          renderAll();
+        }
+        updateSyncStatus(true);
+      }, (err) => {
+        updateSyncStatus(false);
+      });
+    }
+
+    function syncDataToCloud() {
+      if (!firebaseRef) return;
+      
+      const payload = {
+        logs: appState.logs,
+        cabinet: appState.cabinet,
+        lastUpdatedBy: appState.userName || 'Device',
+        updatedAt: Date.now()
+      };
+
+      firebaseRef.set(payload).catch(err => {
+        console.error("Cloud push failed:", err);
+      });
+    }
 
     function setDefaultDateTime() {
       const now = new Date();
@@ -374,11 +435,10 @@
       };
 
       appState.logs.unshift(newLog);
-      saveData();
+      saveLocalData();
       renderAll();
       syncDataToCloud();
 
-      // Reset Inputs
       document.getElementById('log-med-name').value = '';
       document.getElementById('log-med-amount').value = '';
       alert(`Logged ${name} (${amount})!`);
@@ -387,7 +447,7 @@
     function deleteLog(id) {
       if (confirm('Delete this dose entry?')) {
         appState.logs = appState.logs.filter(l => l.id !== id);
-        saveData();
+        saveLocalData();
         renderAll();
         syncDataToCloud();
       }
@@ -402,19 +462,19 @@
       appState.cabinet.push({ id: Date.now(), name, dose: dose || '1 dose' });
       document.getElementById('cab-med-name').value = '';
       document.getElementById('cab-med-dose').value = '';
-      saveData();
+      saveLocalData();
       renderAll();
       syncDataToCloud();
     }
 
     function deleteCabinetMed(id) {
       appState.cabinet = appState.cabinet.filter(c => c.id !== id);
-      saveData();
+      saveLocalData();
       renderAll();
       syncDataToCloud();
     }
 
-    function saveData() {
+    function saveLocalData() {
       localStorage.setItem('parker_logs', JSON.stringify(appState.logs));
       localStorage.setItem('parker_cabinet', JSON.stringify(appState.cabinet));
       localStorage.setItem('parker_household', appState.householdCode);
@@ -458,7 +518,6 @@
         return;
       }
 
-      // Group totals
       const totals = {};
       todayLogs.forEach(l => {
         const key = l.medName;
@@ -477,7 +536,6 @@
     function renderDurationTracker() {
       const container = document.getElementById('med-duration-list');
       
-      // Calculate days on active meds
       const medMap = {};
       appState.logs.forEach(l => {
         if (!medMap[l.medName] || new Date(l.date) > new Date(medMap[l.medName].lastDate)) {
@@ -589,58 +647,11 @@
       if (code) {
         appState.householdCode = code;
         appState.userName = user;
-        saveData();
+        saveLocalData();
         renderAll();
         closeSyncModal();
-        syncDataToCloud();
-        alert(`Connected to household code: ${code}`);
+        connectHouseholdCloud();
       }
-    }
-
-    // REALTIME CLOUD SYNC ENGINE
-    function initSyncEngine() {
-      syncFetchFromCloud();
-      setInterval(syncFetchFromCloud, 4000); // Poll every 4 seconds for updates from spouse
-    }
-
-    function syncDataToCloud() {
-      if (!appState.householdCode) return;
-
-      const payload = {
-        code: appState.householdCode,
-        logs: appState.logs,
-        cabinet: appState.cabinet,
-        updatedAt: Date.now()
-      };
-
-      fetch(`https://kvdb.io/4y932bvhJ2y8Yx8Z29/${appState.householdCode}`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      }).then(() => {
-        updateSyncStatus(true);
-      }).catch(() => {
-        updateSyncStatus(false);
-      });
-    }
-
-    function syncFetchFromCloud() {
-      if (!appState.householdCode) return;
-
-      fetch(`https://kvdb.io/4y932bvhJ2y8Yx8Z29/${appState.householdCode}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.logs) {
-            // Merge remote logs if updated
-            appState.logs = data.logs;
-            if (data.cabinet) appState.cabinet = data.cabinet;
-            saveData();
-            renderAll();
-            updateSyncStatus(true);
-          }
-        })
-        .catch(() => {
-          updateSyncStatus(false);
-        });
     }
 
     function updateSyncStatus(online) {
@@ -649,7 +660,7 @@
 
       if (online) {
         dot.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse';
-        text.innerText = `Synced (${appState.householdCode})`;
+        text.innerText = `Live Cloud (${appState.householdCode})`;
       } else {
         dot.className = 'w-2 h-2 rounded-full bg-amber-500 inline-block';
         text.innerText = `Offline (${appState.householdCode})`;
